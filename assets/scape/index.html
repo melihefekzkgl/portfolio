@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DotScape</title>
+    <style>
+        :root {
+            --bg: #1a1a1a; --text: #e0e0e0; --accent: #E67E22; --dot: #333; --wall: #4a5d6a;
+        }
+        .light-theme {
+            --bg: #f5f5f5; --text: #2c3e50; --dot: #dcdde1; --wall: #7f8c8d;
+        }
+        body { 
+            margin: 0; padding: 0; background: var(--bg); color: var(--text); 
+            font-family: 'Segoe UI', Roboto, sans-serif; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column; align-items: center; transition: 0.3s;
+        }
+
+        /* --- VIEWS --- */
+        .view { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
+        .active-view { display: flex; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+
+        /* YENİ: .scape Logosu Tasarımı (Küçük harf ve şık boşluklar) */
+        h1 { font-size: 4rem; letter-spacing: 5px; color: var(--accent); margin-bottom: 20px; text-transform: lowercase; }
+
+        .btn {
+            background: transparent; border: 2px solid var(--accent); color: var(--accent);
+            padding: 14px 35px; border-radius: 50px; font-weight: bold; font-size: 1rem;
+            margin: 8px; cursor: pointer; transition: 0.2s; min-width: 200px; text-transform: uppercase;
+        }
+        .btn:active { background: var(--accent); color: white; transform: scale(0.95); }
+        
+        .btn.active-selection { background: var(--accent); color: white; }
+
+        /* --- CLEAN SETTINGS UI --- */
+        .settings-card { 
+            background: rgba(255,255,255,0.03); padding: 30px; border-radius: 30px; 
+            width: 85%; max-width: 380px; backdrop-filter: blur(15px); border: 1px solid rgba(255,255,255,0.05);
+        }
+        .setting-row { 
+            display: flex; justify-content: space-between; align-items: center; 
+            margin-bottom: 25px; width: 100%;
+        }
+        .label { font-size: 0.85rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
+
+        .switch { position: relative; display: inline-block; width: 50px; height: 26px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-round {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #333; transition: .4s; border-radius: 34px;
+        }
+        .slider-round:before {
+            position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider-round { background-color: var(--accent); }
+        input:checked + .slider-round:before { transform: translateX(24px); }
+
+        /* --- GAME UI --- */
+        #game-board { transform-origin: top center; margin-top: 15px; }
+        .row { display: flex; justify-content: center; margin-top: -5px; }
+        .row.odd { margin-left: 32px; }
+        .dot { width: 30px; height: 30px; border-radius: 50%; background: var(--dot); margin: 3px; transition: 0.2s; }
+        .dot.wall { background: var(--wall); transform: scale(0.9); }
+        .dot.target { background: var(--accent); transform: scale(1.1); box-shadow: 0 0 20px var(--accent); }
+
+        /* Modal */
+        #modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center;
+        }
+        .modal-card { background: var(--bg); border: 2px solid var(--accent); padding: 40px; border-radius: 30px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="modal-overlay">
+        <div class="modal-card">
+            <h2 id="modal-title" style="color:var(--accent); margin:0;">TITLE</h2>
+            <p id="modal-message" style="margin:20px 0;">Message here...</p>
+            <button class="btn" onclick="closeModal()">OK</button>
+        </div>
+    </div>
+
+    <div id="view-menu" class="view active-view">
+        <h1>.scape</h1>
+        <div style="margin-bottom: 25px; font-size: 0.8rem; opacity: 0.5; letter-spacing: 2px;">BEST RECORD: <span id="menu-best">-</span></div>
+        <button class="btn" onclick="playClick(); startGame()">PLAY</button>
+        <button class="btn" onclick="playClick(); showView('view-settings')">SETTINGS</button>
+    </div>
+
+    <div id="view-settings" class="view">
+        <div class="settings-card">
+            
+            <div style="margin-bottom: 25px;">
+                <span class="label" style="display:block; text-align:center; margin-bottom:10px;">Map Size</span>
+                <div style="display: flex; gap: 8px;">
+                    <button id="size-btn-9" class="btn size-btn" style="min-width: 0; flex: 1; padding: 10px 0; font-size: 0.7rem;" onclick="setMapSize(9)">SMALL</button>
+                    <button id="size-btn-11" class="btn size-btn active-selection" style="min-width: 0; flex: 1; padding: 10px 0; font-size: 0.7rem;" onclick="setMapSize(11)">MEDIUM</button>
+                    <button id="size-btn-13" class="btn size-btn" style="min-width: 0; flex: 1; padding: 10px 0; font-size: 0.7rem;" onclick="setMapSize(13)">LARGE</button>
+                </div>
+            </div>
+
+            <div class="setting-row">
+                <span class="label">Sound Effects</span>
+                <label class="switch">
+                    <input type="checkbox" id="sound-toggle" checked onchange="playClick()">
+                    <span class="slider-round"></span>
+                </label>
+            </div>
+
+            <div style="margin-bottom: 5px;">
+                <span class="label" style="display:block; text-align:center; margin-bottom:10px;">Theme Mode</span>
+                <div style="display: flex; gap: 8px;">
+                    <button id="theme-btn-dark" class="btn theme-btn active-selection" style="min-width: 0; flex: 1; padding: 10px 0; font-size: 0.7rem;" onclick="setTheme('dark')">DARK</button>
+                    <button id="theme-btn-light" class="btn theme-btn" style="min-width: 0; flex: 1; padding: 10px 0; font-size: 0.7rem;" onclick="setTheme('light')">LIGHT</button>
+                </div>
+            </div>
+            
+            <button class="btn" onclick="playClick(); showView('view-menu')" style="border:none; width:100%; margin-top:25px; background: rgba(255,255,255,0.05);">BACK</button>
+        </div>
+    </div>
+
+    <div id="view-game" class="view">
+        <div style="margin-bottom: 15px; font-size: 0.9rem; opacity: 0.7; letter-spacing: 1px;">
+            MOVES: <span id="move-count" style="color:var(--accent); font-weight:bold;">0</span>
+        </div>
+        <div id="game-board"></div>
+        <button class="btn" onclick="playClick(); showView('view-menu')" style="margin-top:25px; font-size: 0.8rem; min-width: 150px;">QUIT GAME</button>
+    </div>
+
+<script>
+    let size = 11, grid = [], targetPos = {r:5, c:5}, gameOver = false, moves = 0;
+    let selectedMapSize = 11;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playSound(freq, type, duration) {
+        if (!document.getElementById('sound-toggle').checked) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playClick() { playSound(440, 'sine', 0.1); }
+
+    function showView(id) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
+        document.getElementById(id).classList.add('active-view');
+        if(id === 'view-game') setTimeout(resizeBoard, 50);
+        updateMenuBest();
+    }
+
+    function setMapSize(s) {
+        selectedMapSize = s;
+        document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active-selection'));
+        document.getElementById('size-btn-' + s).classList.add('active-selection');
+        playClick();
+        updateMenuBest();
+    }
+
+    function startGame() {
+        size = selectedMapSize;
+        moves = 0; gameOver = false;
+        document.getElementById('move-count').innerText = "0";
+        const board = document.getElementById('game-board');
+        board.innerHTML = ''; grid = [];
+        targetPos = { r: Math.floor(size/2), c: Math.floor(size/2) };
+
+        for (let r = 0; r < size; r++) {
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'row' + (r % 2 !== 0 ? ' odd' : '');
+            grid[r] = [];
+            for (let c = 0; c < size; c++) {
+                const dot = document.createElement('div');
+                dot.className = 'dot';
+                const isWall = Math.random() < 0.14 && !(r === targetPos.r && c === targetPos.c);
+                if (isWall) dot.classList.add('wall');
+                dot.onclick = () => makeMove(r, c);
+                rowDiv.appendChild(dot);
+                grid[r][c] = { el: dot, isWall: isWall };
+            }
+            board.appendChild(rowDiv);
+        }
+        grid[targetPos.r][targetPos.c].el.classList.add('target');
+        showView('view-game');
+    }
+
+    function makeMove(r, c) {
+        if (gameOver || grid[r][c].isWall || (r === targetPos.r && c === targetPos.c)) return;
+        moves++;
+        document.getElementById('move-count').innerText = moves;
+        grid[r][c].isWall = true;
+        grid[r][c].el.classList.add('wall');
+        playClick();
+
+        const path = findShortestPath(targetPos.r, targetPos.c);
+        if (!path) {
+            gameOver = true;
+            handleVictory();
+            return;
+        }
+
+        grid[targetPos.r][targetPos.c].el.classList.remove('target');
+        targetPos = path;
+        grid[targetPos.r][targetPos.c].el.classList.add('target');
+        playSound(280, 'sine', 0.1);
+
+        if (targetPos.r === 0 || targetPos.r === size-1 || targetPos.c === 0 || targetPos.c === size-1) {
+            gameOver = true;
+            playSound(150, 'sawtooth', 0.4);
+            showModal("DEFEAT", "The dot escaped!");
+        }
+    }
+
+    function handleVictory() {
+        playSound(880, 'sine', 0.5);
+        const best = localStorage.getItem('best_score_' + size);
+        let msg = "You trapped it in " + moves + " moves!";
+        if (!best || moves < parseInt(best)) {
+            localStorage.setItem('best_score_' + size, moves);
+            msg = "NEW RECORD: " + moves + " MOVES!";
+        }
+        showModal("VICTORY", msg);
+    }
+
+    function showModal(title, msg) {
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-message').innerText = msg;
+        document.getElementById('modal-overlay').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('modal-overlay').style.display = 'none';
+        showView('view-menu');
+    }
+
+    function findShortestPath(sr, sc) {
+        let queue = [[{r: sr, c: sc}]], visited = new Set([`${sr},${sc}`]);
+        while (queue.length > 0) {
+            let path = queue.shift(), curr = path[path.length - 1];
+            if (curr.r === 0 || curr.r === size-1 || curr.c === 0 || curr.c === size-1) return path.length > 1 ? path[1] : null;
+            const os = (curr.r % 2 === 0) ? [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]] : [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+            for (let [dr, dc] of os) {
+                let nr = curr.r + dr, nc = curr.c + dc;
+                if (nr>=0 && nr<size && nc>=0 && nc<size && !grid[nr][nc].isWall && !visited.has(`${nr},${nc}`)) {
+                    visited.add(`${nr},${nc}`); queue.push([...path, {r: nr, c: nc}]);
+                }
+            }
+        }
+        return null;
+    }
+
+    function resizeBoard() {
+        const b = document.getElementById('game-board');
+        const scale = Math.min(1, (window.innerWidth - 40) / ((size * 34) + 32));
+        b.style.transform = `scale(${scale})`;
+    }
+
+    function updateMenuBest() {
+        document.getElementById('menu-best').innerText = localStorage.getItem('best_score_' + selectedMapSize) || "-";
+    }
+
+    function setTheme(m) {
+        if(m === 'light') document.body.classList.add('light-theme');
+        else document.body.classList.remove('light-theme');
+        
+        document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active-selection'));
+        document.getElementById('theme-btn-' + m).classList.add('active-selection');
+        playClick();
+    }
+
+    window.onload = updateMenuBest;
+</script>
+</body>
+</html>
