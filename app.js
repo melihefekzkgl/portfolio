@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// --- AKILLI DİL DEĞİŞTİRME SİSTEMİ ---
 const btnTr = document.getElementById('btn-tr');
 const btnEn = document.getElementById('btn-en');
 
@@ -26,7 +25,6 @@ if (btnEn) btnEn.addEventListener('click', () => changeLanguage('en'));
 
 const loader = new GLTFLoader();
 
-// --- STANDART THREE.JS (TEK PARÇA MODELLER İÇİN) ---
 const container = document.getElementById('three-container');
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000);
@@ -56,7 +54,7 @@ function loadModel(url) {
         currentModel.position.sub(center); 
         scene.add(currentModel);
     }, undefined, function (error) {
-        console.error('Model hatası:', error);
+        console.error(error);
     });
 }
 
@@ -67,8 +65,6 @@ function animate() {
 }
 animate();
 
-
-// --- AKILLI KATMANLI BİNA (EXPLODED VIEW) MOTORU ---
 const explodedContainer = document.getElementById('exploded-container');
 const explodedScene = new THREE.Scene();
 const explodedCamera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
@@ -154,7 +150,7 @@ function loadExplodedModel(url) {
 
         explodedScene.add(explodedModel);
     }, undefined, function (error) {
-        console.error('Katmanlı Model hatası:', error);
+        console.error(error);
     });
 }
 
@@ -200,8 +196,6 @@ function animateExploded() {
 }
 animateExploded();
 
-
-// --- MODAL YÖNETİM SİSTEMİ ---
 const modelModal = document.getElementById("model-modal");
 const gameModal = document.getElementById("game-modal");
 const explodedModal = document.getElementById("exploded-modal");
@@ -267,8 +261,6 @@ if (closeModelBtn) closeModelBtn.addEventListener("click", () => modelModal.styl
 if (closeGameBtn) closeGameBtn.addEventListener("click", () => gameModal.style.display = "none");
 if (closeExplodedBtn) closeExplodedBtn.addEventListener("click", () => explodedModal.style.display = "none");
 
-
-// --- RESİM GALERİSİ (LIGHTBOX) SİSTEMİ ---
 const galleryModal = document.getElementById("gallery-modal");
 const closeGalleryBtn = document.getElementById("close-gallery");
 const galleryImage = document.getElementById("gallery-image");
